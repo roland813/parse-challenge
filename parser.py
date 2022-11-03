@@ -11,9 +11,6 @@ from random import randint
 from time import sleep
 
 
-
-
-
 main_page = 'https://jobs.dou.ua/companies/'
 
 companies_list = 'https://jobs.dou.ua/companies/xhr-load/?'
@@ -25,6 +22,7 @@ headers = {
 }
 
 companies_data = []
+
 
 async def decode_email(e):
     de = ""
@@ -74,20 +72,30 @@ async def load_data(session, url, name):
             emails = soup_offices.find_all(class_='mail')
             phones = soup_offices.find_all(class_='phones')
             emails_company = [
-                await decode_email(email.find('a').get('href').split('#')[-1]) 
+                await decode_email(email.find('a').get('href').split('#')[-1])
                 for email in emails if email.find('a').has_attr('href')
             ]
             phones_company = [phone.text.strip().split('\n\t\t\t\t\t') for phone in phones]
             data = {
-                'name': name, 
-                'url': url, 
-                'size': size, 
+                'name': name,
+                'url': url,
+                'size': size,
                 'description': descriptions_company,
                 'site': site
             }
             result = await normalize_data(data, emails_company, phones_company)
             print(result)
             companies_data.append(result)
+            await csv_f(companies_data)
+
+
+async def csv_f(companies_data):
+    with open(f'dou.csv', 'w') as f:
+        writer = csv.writer(f)
+        for company in companies_data:
+            writer.writerow(company.keys())
+            writer.writerow(company.values())
+
 
 async def main():
     flag = True
@@ -106,7 +114,7 @@ async def main():
                 'count': tick
             }
             tick += 20
-            sleep(randint(3,7))
+            sleep(randint(3, 7))
             async with session.post(companies_list, headers=headers, data=data) as res_comp:
                 data = await res_comp.json()
                 flag = not data['last']
@@ -122,9 +130,3 @@ async def main():
                 await asyncio.sleep(1)
 
 asyncio.run(main())
-
-with open(f'dou.csv', 'w') as f:
-        writer = csv.writer(f)
-        for company in companies_data:
-            writer.writerow(company.keys())
-            writer.writerow(company.values())
